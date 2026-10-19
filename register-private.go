@@ -272,12 +272,36 @@ func decodePathParamStrings(i interface{}) error {
 	return nil
 }
 
+// bindQueryToForm decodes a write request's query string into i's form-tagged fields, skipping reads
+func bindQueryToForm(req *http.Request, i interface{}) error {
+
+	// Reads bind their query parameters through query tags instead
+
+	if req.Method == http.MethodGet || req.Method == http.MethodHead || req.URL.RawQuery == "" {
+		return nil
+	}
+
+	values, err := url.ParseQuery(req.URL.RawQuery)
+
+	if err != nil {
+		return err
+	}
+
+	return formDecoder.Decode(i, expandEmptyBracketArrays(values))
+}
+
 // bindBody reads the request body into i. Form and multipart-form bodies go through
 // formDecoder (which understands nested structs and arrays); everything else (JSON, XML,
 // or no body at all) falls back to echo's own body binder.
 func bindBody(ctx echo.Context, i interface{}) error {
 
 	req := ctx.Request()
+
+	// RULE: Mastodon reads a write's parameters from the query string as well as the body, and some
+	// clients (Ice Cubes' push subscription) send them only there. Decoded first, so a body value wins
+	if err := bindQueryToForm(req, i); err != nil {
+		return err
+	}
 
 	if req.ContentLength == 0 {
 		return nil
