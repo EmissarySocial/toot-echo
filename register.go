@@ -58,7 +58,7 @@ func Register[AuthToken toot.ScopesGetter](e *echo.Echo, api toot.API[AuthToken]
 	paged_result(api, e.GET, route.GetBlocks, api.GetBlocks, scope.GetBlocks, middleware...)
 
 	// https://docs.joinmastodon.org/methods/bookmarks/
-	single_result(api, e.GET, route.GetBookmarks, api.GetBookmarks, scope.GetBookmarks, middleware...)
+	paged_result(api, e.GET, route.GetBookmarks, api.GetBookmarks, scope.GetBookmarks, middleware...)
 
 	// https://docs.joinmastodon.org/methods/conversations/
 	paged_result(api, e.GET, route.GetConversations, api.GetConversations, scope.GetConversations, middleware...)
@@ -83,7 +83,7 @@ func Register[AuthToken toot.ScopesGetter](e *echo.Echo, api toot.API[AuthToken]
 	paged_result(api, e.GET, route.GetEndorsements, api.GetEndorsements, scope.GetEndorsements, middleware...)
 
 	// https://docs.joinmastodon.org/methods/favourites/
-	single_result(api, e.GET, route.GetFavourites, api.GetFavourites, scope.GetFavourites, middleware...)
+	paged_result(api, e.GET, route.GetFavourites, api.GetFavourites, scope.GetFavourites, middleware...)
 
 	// https://docs.joinmastodon.org/methods/featured_tags/
 	single_result(api, e.GET, route.GetFeaturedTags, api.GetFeaturedTags, scope.GetFeaturedTags, middleware...)

@@ -191,3 +191,112 @@ func TestBindMultipartFiles_LeavesUnrelatedOrMissingFieldsAlone(t *testing.T) {
 	notAStruct := "hello"
 	require.NoError(t, bindMultipartFiles(&notAStruct, map[string][]*multipart.FileHeader{"file": {{}}}))
 }
+
+// TestBindBody_UnsentFieldsStayNil replays the profile edit the iOS app sends -- display_name, an empty
+// note, and bot=false, with no discoverable -- and confirms the omitted field decodes as nil.
+func TestBindBody_UnsentFieldsStayNil(t *testing.T) {
+
+	var received txn.PatchAccount_UpdateCredentials
+
+	api := toot.New(func(*http.Request) (testToken, error) {
+		return testToken{}, nil
+	})
+
+	api.PatchAccount_UpdateCredentials = func(_ testToken, input txn.PatchAccount_UpdateCredentials) (object.Account, error) {
+		received = input
+		return object.Account{ID: "test-id"}, nil
+	}
+
+	e := echo.New()
+	Register(e, api)
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	require.NoError(t, writer.WriteField("note", ""))
+	require.NoError(t, writer.WriteField("bot", "false"))
+	require.NoError(t, writer.WriteField("display_name", "Test Demo"))
+	require.NoError(t, writer.Close())
+
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/accounts/update_credentials", body)
+	req.Header.Set(echo.HeaderContentType, writer.FormDataContentType())
+	req.Header.Set(echo.HeaderAuthorization, "Bearer test")
+
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	require.NotNil(t, received.DisplayName)
+	require.Equal(t, "Test Demo", *received.DisplayName)
+
+	require.NotNil(t, received.Note, "a note that was sent empty is still sent")
+	require.Equal(t, "", *received.Note)
+
+	require.NotNil(t, received.Bot)
+	require.False(t, *received.Bot)
+
+	require.Nil(t, received.Discoverable, "a field the client left out must stay nil")
+	require.Nil(t, received.Locked)
+}
+
+// TestBindBody_ProfileImagesReachTheHandler uploads an avatar and a header the way the iOS app does
+// and confirms both files reach the handler, alongside a text field.
+func TestBindBody_ProfileImagesReachTheHandler(t *testing.T) {
+
+	var received txn.PatchAccount_UpdateCredentials
+	var avatarContent string
+
+	api := toot.New(func(*http.Request) (testToken, error) {
+		return testToken{}, nil
+	})
+
+	api.PatchAccount_UpdateCredentials = func(_ testToken, input txn.PatchAccount_UpdateCredentials) (object.Account, error) {
+		received = input
+
+		if input.Avatar != nil {
+			file, err := input.Avatar.Open()
+			require.NoError(t, err)
+			defer func() { require.NoError(t, file.Close()) }()
+
+			content, err := io.ReadAll(file)
+			require.NoError(t, err)
+			avatarContent = string(content)
+		}
+
+		return object.Account{ID: "test-id"}, nil
+	}
+
+	e := echo.New()
+	Register(e, api)
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	require.NoError(t, writer.WriteField("display_name", "With Pictures"))
+
+	avatar, err := writer.CreateFormFile("avatar", "me.png")
+	require.NoError(t, err)
+	_, err = avatar.Write([]byte("avatar bytes"))
+	require.NoError(t, err)
+
+	header, err := writer.CreateFormFile("header", "banner.jpg")
+	require.NoError(t, err)
+	_, err = header.Write([]byte("header bytes"))
+	require.NoError(t, err)
+
+	require.NoError(t, writer.Close())
+
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/accounts/update_credentials", body)
+	req.Header.Set(echo.HeaderContentType, writer.FormDataContentType())
+	req.Header.Set(echo.HeaderAuthorization, "Bearer test")
+
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	require.Equal(t, "With Pictures", *received.DisplayName)
+	require.NotNil(t, received.Avatar)
+	require.Equal(t, "me.png", received.Avatar.Filename)
+	require.Equal(t, "avatar bytes", avatarContent)
+	require.NotNil(t, received.Header)
+	require.Equal(t, "banner.jpg", received.Header.Filename)
+}

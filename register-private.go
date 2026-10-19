@@ -83,7 +83,9 @@ func paged_result[AuthToken toot.ScopesGetter, Input any, Output any](api toot.A
 		// RULE: PageInfo.SetHeader prefixes the Link header with its "path"
 		// argument verbatim, so it must be an absolute URL. Clients follow the
 		// Link header as-is, and a bare path fails with "unsupported URL".
-		baseURL := ctx.Scheme() + "://" + ctx.Request().Host + ctx.Request().URL.Path
+		//
+		// The query string goes along too, so that each link keeps the request's filters.
+		baseURL := ctx.Scheme() + "://" + ctx.Request().Host + ctx.Request().URL.RequestURI()
 		pageInfo.SetHeader(ctx.Response().Header(), baseURL)
 
 		// Return outputs to the caller
@@ -149,9 +151,19 @@ func getInputs[AuthToken toot.ScopesGetter, Input any](ctx echo.Context, api too
 
 	// If the request is not public (at least one scope is required)
 	// then try to authorize the request.
-	// If no scopes are required, then an empty AuthToken
-	// will be passed to the handler.
-	if requiredScope != scope.Public {
+	// A public request is open to anyone, so it is never refused; but when the
+	// caller did send a valid token, the handler still gets to know who is asking.
+	// Otherwise, an empty AuthToken will be passed to the handler.
+	if requiredScope == scope.Public {
+
+		if api.Authorize != nil {
+
+			if token, err := api.Authorize(ctx.Request()); err == nil {
+				authToken = token
+			}
+		}
+
+	} else {
 
 		var err error
 		authToken, err = api.Authorize(ctx.Request())
