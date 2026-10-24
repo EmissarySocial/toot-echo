@@ -27,6 +27,7 @@ func Register[AuthToken toot.ScopesGetter](e *echo.Echo, api toot.API[AuthToken]
 	single_result(api, get, route.GetAccounts, api.GetAccounts, scope.GetAccounts, middleware...)
 	single_result(api, get, route.GetAccount, api.GetAccount, scope.GetAccount, middleware...)
 	paged_result(api, get, route.GetAccount_Statuses, api.GetAccount_Statuses, scope.GetAccount_Statuses, middleware...)
+	paged_result(api, get, route.GetAccount_Collections, api.GetAccount_Collections, scope.GetAccount_Collections, middleware...)
 	paged_result(api, get, route.GetAccount_Followers, api.GetAccount_Followers, scope.GetAccount_Followers, middleware...)
 	paged_result(api, get, route.GetAccount_Following, api.GetAccount_Following, scope.GetAccount_Following, middleware...)
 	paged_result(api, get, route.GetAccount_FeaturedTags, api.GetAccount_FeaturedTags, scope.GetAccount_FeaturedTags, middleware...)
@@ -161,6 +162,11 @@ func Register[AuthToken toot.ScopesGetter](e *echo.Echo, api toot.API[AuthToken]
 	single_result(api, e.POST, route.PostNotification_Dismiss, api.PostNotification_Dismiss, scope.PostNotification_Dismiss, middleware...)
 	single_result(api, get, route.GetNotifications_UnreadCount, api.GetNotifications_UnreadCount, scope.GetNotifications_UnreadCount, middleware...)
 	single_result(api, get, route.GetNotificationPolicy, api.GetNotificationPolicy, scope.GetNotificationPolicy, middleware...)
+	paged_result(api, get, route.GetNotificationRequests, api.GetNotificationRequests, scope.GetNotificationRequests, middleware...)
+	single_result(api, e.POST, route.PostNotificationRequest_Accept, api.PostNotificationRequest_Accept, scope.PostNotificationRequest_Accept, middleware...)
+	single_result(api, e.POST, route.PostNotificationRequest_Dismiss, api.PostNotificationRequest_Dismiss, scope.PostNotificationRequest_Dismiss, middleware...)
+	single_result(api, e.POST, route.PostNotificationRequests_Accept, api.PostNotificationRequests_Accept, scope.PostNotificationRequests_Accept, middleware...)
+	single_result(api, e.POST, route.PostNotificationRequests_Dismiss, api.PostNotificationRequests_Dismiss, scope.PostNotificationRequests_Dismiss, middleware...)
 
 	// https://docs.joinmastodon.org/methods/oauth/
 	single_result(api, get, route.GetOAuth_Authorize, api.GetOAuth_Authorize, scope.GetOAuth_Authorize, middleware...)
