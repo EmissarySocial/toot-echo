@@ -1,5 +1,7 @@
 github.com/benpate/derp v0.44.0 h1:BEu0hEBBxqFJI/Gv/4McsDYaWJunj5ujVTOvU3FUQDM=
 github.com/benpate/derp v0.44.0/go.mod h1:S+BfAuBBh12eVaAGCQhut2w1i5aQQdWOmKQo40IgqjM=
+github.com/benpate/derp v0.48.0 h1:0qsntbAGQMuJ2PTlxILqCtdYuZmRHJh6jsFAH+0k4bw=
+github.com/benpate/derp v0.48.0/go.mod h1:Lpak9Qm2b1sXT03OBzwWWG/oKqhUFE5Ib7LKYDASV0s=
 github.com/benpate/rosetta v0.45.0 h1:wKfRG36tBZb25LIrXzZ0TepCY3QxUsr2NrBo5jqjklA=
 github.com/benpate/rosetta v0.45.0/go.mod h1:+RzUusPEAVo87qAtzyn1NgZIuuB62lXOKkxb2dIfinA=
 github.com/benpate/toot v0.9.1 h1:yKCfSW6j8TXgCNWttbFDDX2vttnxpdt8PlTVOKi3ySc=

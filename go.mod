@@ -1,9 +1,9 @@
 module github.com/benpate/toot-echo
 
-go 1.26.0
+go 1.27.3
 
 require (
-	github.com/benpate/derp v0.44.0
+	github.com/benpate/derp v0.48.0
 	github.com/benpate/rosetta v0.45.0
 	github.com/benpate/toot v0.9.1
 	github.com/go-playground/form/v4 v4.5.0
