@@ -338,7 +338,12 @@ func bindBody(ctx echo.Context, i interface{}) error {
 			return err
 		}
 
-		return formDecoder.Decode(i, expandEmptyBracketArrays(values))
+		if err := formDecoder.Decode(i, expandEmptyBracketArrays(values)); err != nil {
+			return err
+		}
+
+		bindEmptyBracketMaps(i, values)
+		return nil
 
 	case echo.MIMEMultipartForm:
 		if err := req.ParseMultipartForm(32 << 20); err != nil {
@@ -348,6 +353,8 @@ func bindBody(ctx echo.Context, i interface{}) error {
 		if err := formDecoder.Decode(i, expandEmptyBracketArrays(req.MultipartForm.Value)); err != nil {
 			return err
 		}
+
+		bindEmptyBracketMaps(i, req.MultipartForm.Value)
 
 		// go-playground/form decodes url.Values (text fields) -- it has no concept of an
 		// uploaded file, which lives in req.MultipartForm.File instead. A *multipart.FileHeader
@@ -387,6 +394,46 @@ func expandEmptyBracketArrays(values url.Values) url.Values {
 	}
 
 	return result
+}
+
+// bindEmptyBracketMaps sets a nil map field on i (matched by its form tag) to an empty map when the
+// request sent that field as "field[]" with only empty values
+func bindEmptyBracketMaps(i interface{}, values url.Values) {
+
+	// Mastodon clients send this to clear a map field, such as the official app's "fields_attributes[]",
+	// and the form decoder drops it
+
+	v := reflect.ValueOf(i)
+
+	if v.Kind() != reflect.Ptr || v.IsNil() || v.Elem().Kind() != reflect.Struct {
+		return
+	}
+
+	v = v.Elem()
+	t := v.Type()
+
+	for index := 0; index < t.NumField(); index++ {
+
+		field := t.Field(index)
+
+		if field.Type.Kind() != reflect.Map || !v.Field(index).IsNil() {
+			continue
+		}
+
+		tag, _, _ := strings.Cut(field.Tag.Get("form"), ",")
+
+		if tag == "" || tag == "-" {
+			continue
+		}
+
+		sent, found := values[tag+"[]"]
+
+		if !found || strings.Join(sent, "") != "" {
+			continue
+		}
+
+		v.Field(index).Set(reflect.MakeMap(field.Type))
+	}
 }
 
 // fileHeaderType is *multipart.FileHeader, cached once rather than reflected on every call.

@@ -300,3 +300,73 @@ func TestBindBody_ProfileImagesReachTheHandler(t *testing.T) {
 	require.NotNil(t, received.Header)
 	require.Equal(t, "banner.jpg", received.Header.Filename)
 }
+
+// TestBindBody_ProfileFieldsReachTheHandler covers the official app's multipart profile fields, its empty
+// "fields_attributes[]" that clears them, and Ice Cubes' JSON map keyed by position
+func TestBindBody_ProfileFieldsReachTheHandler(t *testing.T) {
+
+	type field = struct {
+		Name  string `form:"name" json:"name"`
+		Value string `form:"value" json:"value"`
+	}
+
+	var received txn.PatchAccount_UpdateCredentials
+
+	api := toot.New(func(*http.Request) (testToken, error) {
+		return testToken{}, nil
+	})
+
+	api.PatchAccount_UpdateCredentials = func(_ testToken, input txn.PatchAccount_UpdateCredentials) (object.Account, error) {
+		received = input
+		return object.Account{ID: "test-id"}, nil
+	}
+
+	e := echo.New()
+	Register(e, api)
+
+	// send runs one update_credentials request and returns what the handler received
+	send := func(body io.Reader, contentType string) txn.PatchAccount_UpdateCredentials {
+		t.Helper()
+		received = txn.PatchAccount_UpdateCredentials{}
+		req := httptest.NewRequest(http.MethodPatch, "/api/v1/accounts/update_credentials", body)
+		req.Header.Set(echo.HeaderContentType, contentType)
+		req.Header.Set(echo.HeaderAuthorization, "Bearer test")
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		return received
+	}
+
+	// multipart builds a multipart body from key/value pairs, in order
+	multipartBody := func(pairs ...string) (io.Reader, string) {
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+		for index := 0; index < len(pairs); index += 2 {
+			require.NoError(t, writer.WriteField(pairs[index], pairs[index+1]))
+		}
+		require.NoError(t, writer.Close())
+		return body, writer.FormDataContentType()
+	}
+
+	// The official app: one key per name and value
+	body, contentType := multipartBody(
+		"fields_attributes[0][name]", "Website", "fields_attributes[0][value]", "https://example.com",
+		"fields_attributes[1][name]", "Code", "fields_attributes[1][value]", "https://git.example.com",
+	)
+	got := send(body, contentType)
+	require.Equal(t, map[string]field{"0": {"Website", "https://example.com"}, "1": {"Code", "https://git.example.com"}}, map[string]field(got.FieldsAttributes))
+
+	// The official app clearing every field
+	body, contentType = multipartBody("fields_attributes[]", "", "display_name", "Demo")
+	got = send(body, contentType)
+	require.NotNil(t, got.FieldsAttributes, "an empty list is still sent")
+	require.Empty(t, got.FieldsAttributes)
+
+	// Ice Cubes: a JSON object keyed by position
+	got = send(strings.NewReader(`{"display_name":"Demo","fields_attributes":{"0":{"name":"Website","value":"https://example.com"}}}`), echo.MIMEApplicationJSON)
+	require.Equal(t, map[string]field{"0": {"Website", "https://example.com"}}, map[string]field(got.FieldsAttributes))
+
+	// Nothing sent: nil, so the handler leaves the fields alone
+	body, contentType = multipartBody("display_name", "Demo")
+	require.Nil(t, send(body, contentType).FieldsAttributes)
+}
