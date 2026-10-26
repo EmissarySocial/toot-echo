@@ -40,6 +40,17 @@ func newFormDecoder() *form.Decoder {
 // a new echo.HandlerFunc with the echo router.
 type echoMethod func(string, echo.HandlerFunc, ...echo.MiddlewareFunc) *echo.Route
 
+// getWithHead returns an echoMethod that registers a route for both GET and HEAD
+func getWithHead(e *echo.Echo) echoMethod {
+
+	// Without the HEAD, echo answers a HEAD request from another matching route, such as a "/api/**"
+	// catch-all. net/http sends no body for HEAD, so the GET handler serves it as-is.
+	return func(path string, handler echo.HandlerFunc, middleware ...echo.MiddlewareFunc) *echo.Route {
+		e.HEAD(path, handler, middleware...)
+		return e.GET(path, handler, middleware...)
+	}
+}
+
 // commonWrapper is a function that can be used to handle both single results and paged results.
 type commonWrapper[AuthToken toot.ScopesGetter, Input any, Output any] func(echo.Context, AuthToken, Input) (Output, error)
 

@@ -17,9 +17,10 @@ import (
  * that the four halves line up.
  ******************************************/
 
-// registration matches one line of Register, capturing its four halves.
+// registration matches one line of Register, capturing its four halves. GET routes register through
+// the "get" wrapper (GET plus HEAD), so that name counts as GET.
 var registration = regexp.MustCompile(
-	`(single_result|paged_result)\(api, e\.([A-Z]+), route\.(\w+), api\.(\w+), scope\.(\w+)`)
+	`(single_result|paged_result)\(api, (?:e\.)?([A-Za-z]+), route\.(\w+), api\.(\w+), scope\.(\w+)`)
 
 // methodForPrefix maps the verb that begins an endpoint name to its HTTP method.
 var methodForPrefix = []struct {
@@ -45,6 +46,9 @@ func readRegistrations(t *testing.T) [][]string {
 
 	for _, line := range strings.Split(string(source), "\n") {
 		if match := registration.FindStringSubmatch(line); match != nil {
+			if match[2] == "get" {
+				match[2] = "GET"
+			}
 			result = append(result, match)
 		}
 	}
