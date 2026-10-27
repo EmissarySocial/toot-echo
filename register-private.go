@@ -245,7 +245,7 @@ func decodePathParamStrings(i interface{}) error {
 
 	v := reflect.ValueOf(i)
 
-	if v.Kind() != reflect.Ptr || v.IsNil() {
+	if v.Kind() != reflect.Pointer || v.IsNil() {
 		return nil
 	}
 
@@ -405,7 +405,7 @@ func bindEmptyBracketMaps(i interface{}, values url.Values) {
 
 	v := reflect.ValueOf(i)
 
-	if v.Kind() != reflect.Ptr || v.IsNil() || v.Elem().Kind() != reflect.Struct {
+	if v.Kind() != reflect.Pointer || v.IsNil() || v.Elem().Kind() != reflect.Struct {
 		return
 	}
 
@@ -450,7 +450,7 @@ func bindMultipartFiles(i interface{}, fileForm map[string][]*multipart.FileHead
 
 	v := reflect.ValueOf(i)
 
-	if v.Kind() != reflect.Ptr || v.IsNil() {
+	if v.Kind() != reflect.Pointer || v.IsNil() {
 		return nil
 	}
 
