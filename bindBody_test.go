@@ -61,7 +61,7 @@ func TestBindBody_MultipartFileReachesTheHandler(t *testing.T) {
 
 		file, err := input.File.Open()
 		require.NoError(t, err)
-		defer file.Close()
+		defer func() { _ = file.Close() }()
 
 		content, err := io.ReadAll(file)
 		require.NoError(t, err)
