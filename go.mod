@@ -4,7 +4,7 @@ go 1.27.3
 
 require (
 	github.com/benpate/derp v0.48.0
-	github.com/benpate/rosetta v0.45.0
+	github.com/benpate/rosetta v0.46.0
 	github.com/benpate/toot v0.11.0
 	github.com/go-playground/form/v4 v4.5.0
 	github.com/labstack/echo/v4 v4.16.0
