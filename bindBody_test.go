@@ -160,7 +160,7 @@ func TestBindMultipartFiles_LeavesUnrelatedOrMissingFieldsAlone(t *testing.T) {
 		File        *multipart.FileHeader `form:"file"`
 		Thumbnail   *multipart.FileHeader `form:"thumbnail"`
 		Description string                `form:"description"`
-		untagged    *multipart.FileHeader //nolint:unused // exercises "no form tag" below
+		untagged    *multipart.FileHeader // has no form tag, so no upload can reach it
 	}
 
 	// No files uploaded at all
@@ -185,6 +185,14 @@ func TestBindMultipartFiles_LeavesUnrelatedOrMissingFieldsAlone(t *testing.T) {
 	require.NotNil(t, two.File)
 	require.Equal(t, "photo.jpg", two.File.Filename)
 	require.Nil(t, two.Thumbnail)
+
+	// A field with no form tag is never set, even by an upload named after it
+	three := input{}
+	require.NoError(t, bindMultipartFiles(&three, map[string][]*multipart.FileHeader{
+		"untagged": {{Filename: "stray.png"}},
+	}))
+	require.Nil(t, three.untagged)
+	require.Nil(t, three.File)
 
 	// Not a pointer, and not a struct: both must be quietly ignored, not panic
 	require.NoError(t, bindMultipartFiles(input{}, map[string][]*multipart.FileHeader{"file": {{}}}))
